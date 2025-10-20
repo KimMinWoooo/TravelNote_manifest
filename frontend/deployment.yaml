@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: minwoooo3396/travelnote-frontend:build-6 # 방금 Push한 이미지
+        image: minwoooo3396/travelnote-frontend:build-7 # 방금 Push한 이미지
         ports:
         - containerPort: 80
