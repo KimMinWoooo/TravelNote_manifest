@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traveler-service
+  namespace: travelnote
+spec:
+  selector:
+    app: traveler-service
+  ports:
+  - port: 8083
+    targetPort: 8083

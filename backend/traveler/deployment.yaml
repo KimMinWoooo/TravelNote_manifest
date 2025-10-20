@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traveler-service
+  namespace: travelnote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traveler-service
+  template:
+    metadata:
+      labels:
+        app: traveler-service
+    spec:
+      containers:
+      - name: traveler-service
+        image: minwoooo3396/travelnote-traveler:v1 # ✅ Docker Hub 이미지로 변경
+        ports:
+        - containerPort: 8083
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
