@@ -1,0 +1,277 @@
+# 1. Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: travelnote
+---
+# 2. Member Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: member-service
+  namespace: travelnote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: member-service
+  template:
+    metadata:
+      labels:
+        app: member-service
+    spec:
+      containers:
+      - name: member-service
+        image: minwoooo3396/travelnote-member:v1 # ✅ Docker Hub 이미지로 변경
+        ports:
+        - containerPort: 8081
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: member-service
+  namespace: travelnote
+spec:
+  selector:
+    app: member-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+---
+# 3. Trip Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trip-service
+  namespace: travelnote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trip-service
+  template:
+    metadata:
+      labels:
+        app: trip-service
+    spec:
+      containers:
+      - name: trip-service
+        image: minwoooo3396/travelnote-trip:v1 # ✅ Docker Hub 이미지로 변경
+        ports:
+        - containerPort: 8082
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trip-service
+  namespace: travelnote
+spec:
+  selector:
+    app: trip-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+---
+# 4. Traveler Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traveler-service
+  namespace: travelnote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traveler-service
+  template:
+    metadata:
+      labels:
+        app: traveler-service
+    spec:
+      containers:
+      - name: traveler-service
+        image: minwoooo3396/travelnote-traveler:v1 # ✅ Docker Hub 이미지로 변경
+        ports:
+        - containerPort: 8083
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traveler-service
+  namespace: travelnote
+spec:
+  selector:
+    app: traveler-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: travelnote
+  labels:
+    app: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: minwoooo3396/travelnote-payment:v1
+        ports:
+        - containerPort: 8084
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: travelnote
+  labels:
+    app: payment-service
+spec:
+  ports:
+  - port: 8084
+    targetPort: 8084
+  selector:
+    app: payment-service 
+
+---
+# 6. Frontend Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: travelnote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: minwoooo3396/travelnote-frontend:v1 # 방금 Push한 이미지
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: travelnote
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+
+# 5. Istio Gateway & VirtualService
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: travelnote-gateway
+  namespace: travelnote
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: travelnote-virtualservice
+  namespace: travelnote
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - travelnote-gateway
+  http:
+  - name: "member-route"
+    match:
+    - uri:
+        prefix: /api/member  # ✅ 실제 요청 경로인 /api/member 와 일치시킴
+    rewrite:
+      uri: "/members"
+    route:
+    - destination:
+        host: member-service
+        port:
+          number: 8081
+  - name: "trip-route"
+    match:
+    - uri:
+        prefix: /api/trip      # ✅ 실제 요청 경로인 /api/trip 와 일치시킴
+    rewrite:
+      uri: "/trips"
+    route:
+    - destination:
+        host: trip-service
+        port:
+          number: 8082
+  - name: "traveler-route"
+    match:
+    - uri:
+        prefix: /api/traveler  # ✅ 실제 요청 경로인 /api/traveler 와 일치시킴
+    rewrite:
+      uri: "/travelers"
+    route:
+    - destination:
+        host: traveler-service
+        port:
+          number: 8083
+  - name: "payment-route"
+    match:
+    - uri:
+        prefix: /api/payment   # ✅ 실제 요청 경로인 /api/payment 와 일치시킴
+    rewrite:
+      uri: "/payments"
+    route:
+    - destination:
+        host: payment-service
+        port:
+          number: 8084
+  - name: "frontend-route"
+    match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: frontend-service # 위에서 만든 프론트엔드 서비스
+        port:
+          number: 80
