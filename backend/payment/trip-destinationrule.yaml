@@ -1,0 +1,14 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: trip-service-dr
+  namespace: travelnote
+spec:
+  host: trip-service # Service의 이름
+  subsets:
+  - name: v1
+    labels:
+      version: v1 # Pod에 v1 라벨이 붙은 것을 찾음
+  - name: v2
+    labels:
+      version: v2 # Pod에 v2 라벨이 붙은 것을 찾음
